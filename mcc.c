@@ -20,6 +20,9 @@ struct Token {
   char *str;      // Token string
 };
 
+// Input program
+char *user_input;
+
 // Current token
 Token *token;
 
@@ -27,6 +30,20 @@ Token *token;
 void error(char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
+  vfprintf(stderr, fmt, ap);
+  fprintf(stderr, "\n");
+  exit(1);
+}
+
+// Reports an error location and exit.
+void error_at(char *loc, char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+
+  int pos = loc - user_input;
+  fprintf(stderr, "%s\n", user_input);
+  fprintf(stderr, "%*s", pos, ""); // print pos spaces.
+  fprintf(stderr, "^ ");
   vfprintf(stderr, fmt, ap);
   fprintf(stderr, "\n");
   exit(1);
@@ -43,14 +60,14 @@ bool consume(char op) {
 // Ensure that current token is 'op'.
 void expect(char op) {
   if (token->kind != TK_RESERVED || token->str[0] != op)
-    error("'%c'ではありません", op);
+    error_at(token->str ,"expected '%c'", op);
   token = token->next; 
 }
 
 // Ensure that the current token is TK_NUM.
 int expect_number() {
   if (token->kind != TK_NUM)
-    error("数ではありません");
+    error_at(token->str, "expected a number");
   int val = token->val;
   token = token->next;
   return val;
@@ -69,8 +86,9 @@ Token *new_token(TokenKind kind, Token *cur, char *str) {
   return tok;
 }
 
-// Tokenize 'p' and returns new tokens.
-Token *tokenize(char *p) {
+// Tokenize 'user_input' and returns new tokens.
+Token *tokenize() {
+  char *p = user_input;
   Token head;
   head.next = NULL;
   Token *cur = &head;
@@ -95,7 +113,7 @@ Token *tokenize(char *p) {
       continue;
     }
 
-    error("トークナイズできません");
+    error_at(p, "expected a number");
   }
 
   new_token(TK_EOF, cur, p);
@@ -104,11 +122,12 @@ Token *tokenize(char *p) {
 
 int main(int argc, char **argv) {
   if (argc != 2) {
-    error("引数の個数が正しくありません");
+    error("%s: invalid number of arguments", argv[0]);
     return 1;
   }
 
-  token = tokenize(argv[1]);
+  user_input = argv[1];
+  token = tokenize();
 
   printf(".intel_syntax noprefix\n");
   printf(".globl main\n");
