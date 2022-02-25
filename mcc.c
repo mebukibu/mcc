@@ -6,22 +6,24 @@
 #include <string.h>
 
 typedef enum {
-  TK_RESERVED,
-  TK_NUM,
-  TK_EOF,
+  TK_RESERVED, // Keywords or punctuators
+  TK_NUM,      // Integer literals
+  TK_EOF,      // End-of-file markers
 } TokenKind;
 
+// Token type
 typedef struct Token Token;
-
 struct Token {
-  TokenKind kind;
-  Token *next;
-  int val;
-  char *str;
+  TokenKind kind; // Token kind
+  Token *next;    // Next token
+  int val;        // If kind is TK_NUM, its value
+  char *str;      // Token string
 };
 
+// Current token
 Token *token;
 
+// Reports an error and exit.
 void error(char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
@@ -30,6 +32,7 @@ void error(char *fmt, ...) {
   exit(1);
 }
 
+// Consume the current token if it matches 'op'.
 bool consume(char op) {
   if (token->kind != TK_RESERVED || token->str[0] != op)
     return false;
@@ -37,12 +40,14 @@ bool consume(char op) {
   return true;
 }
 
+// Ensure that current token is 'op'.
 void expect(char op) {
   if (token->kind != TK_RESERVED || token->str[0] != op)
     error("'%c'ではありません", op);
   token = token->next; 
 }
 
+// Ensure that the current token is TK_NUM.
 int expect_number() {
   if (token->kind != TK_NUM)
     error("数ではありません");
@@ -55,6 +60,7 @@ bool at_eof() {
   return token->kind == TK_EOF;
 }
 
+// Creat a new token and add it as the next token of 'cur'.
 Token *new_token(TokenKind kind, Token *cur, char *str) {
   Token *tok = calloc(1, sizeof(Token));
   tok->kind = kind;
@@ -63,22 +69,26 @@ Token *new_token(TokenKind kind, Token *cur, char *str) {
   return tok;
 }
 
+// Tokenize 'p' and returns new tokens.
 Token *tokenize(char *p) {
   Token head;
   head.next = NULL;
   Token *cur = &head;
 
   while (*p) {
+    // Skip whitespace characters.
     if (isspace(*p)) {
       p++;
       continue;
     }
 
+    // Punctuator
     if (*p == '+' || *p == '-') {
       cur = new_token(TK_RESERVED, cur, p++);
       continue;
     }
 
+    // Integer literal
     if (isdigit(*p)) {
       cur = new_token(TK_NUM, cur, p);
       cur->val = strtol(p, &p, 10);
@@ -104,8 +114,10 @@ int main(int argc, char **argv) {
   printf(".globl main\n");
   printf("main:\n");
 
+  // The first token must be a number.
   printf("  mov rax, %d\n", expect_number());
 
+  // ... followed by either '+ <number>' or '- <number>'.
   while (!at_eof()) {
     if (consume('+')) {
       printf("  add rax, %d\n", expect_number());
