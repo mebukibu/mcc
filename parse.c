@@ -44,7 +44,6 @@ Node *program() {
     cur->next = stmt();
     cur = cur->next;
   }
-
   return head.next;
 }
 
@@ -57,7 +56,7 @@ Node *stmt() {
     return node;
   }
 
-  Node *node = expr();
+  Node *node = new_unary(ND_EXPR_STMT, expr());
   expect(";");
   return node;
 }
