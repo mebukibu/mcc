@@ -1,9 +1,5 @@
 #include "mcc.h"
 
-//
-// Tokenizer
-//
-
 char *user_input;
 Token *token;
 
@@ -55,12 +51,12 @@ Token *consume_ident() {
   return t;
 }
 
-// Ensure that current token is 'op'.
+// Ensure that the current token is 'op'.
 void expect(char *op) {
   if (token->kind != TK_RESERVED || strlen(op) != token->len ||
       memcmp(token->str, op, token->len))
-    error_at(token->str ,"expected \"%s\"", op);
-  token = token->next; 
+    error_at(token->str, "expected \"%s\"", op);
+  token = token->next;
 }
 
 // Ensure that the current token is TK_NUM.
@@ -72,11 +68,20 @@ int expect_number() {
   return val;
 }
 
+// Ensure that the current token is TK_IDENT.
+char *expect_ident() {
+  if (token->kind != TK_IDENT)
+    error_at(token->str, "expected an identifier");
+  char *s = strndup(token->str, token->len);
+  token = token->next;
+  return s;
+}
+
 bool at_eof() {
   return token->kind == TK_EOF;
 }
 
-// Creat a new token and add it as the next token of 'cur'.
+// Create a new token and add it as the next token of 'cur'.
 Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
   Token *tok = calloc(1, sizeof(Token));
   tok->kind = kind;
@@ -141,7 +146,6 @@ Token *tokenize() {
       continue;
     }
 
-
     // Single-letter punctuator
     if (strchr("+-*/()<>;={},", *p)) {
       cur = new_token(TK_RESERVED, cur, p++, 1);
@@ -151,7 +155,7 @@ Token *tokenize() {
     // Identifier
     if (is_alpha(*p)) {
       char *q = p++;
-      while(is_alnum(*p))
+      while (is_alnum(*p))
         p++;
       cur = new_token(TK_IDENT, cur, q, p - q);
       continue;

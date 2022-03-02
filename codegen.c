@@ -1,7 +1,9 @@
 #include "mcc.h"
 
-int labelseq = 0;
 char *argreg[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+
+int labelseq = 0;
+char *funcname;
 
 // Pushes the given node's address to the stack.
 void gen_addr(Node *node) {
@@ -47,7 +49,7 @@ void gen(Node *node) {
     store();
     return;
   case ND_IF: {
-    int seq  =labelseq++;
+    int seq = labelseq++;
     if (node->els) {
       gen(node->cond);
       printf("  pop rax\n");
@@ -111,10 +113,10 @@ void gen(Node *node) {
 
     for (int i = nargs - 1; i >= 0; i--)
       printf("  pop %s\n", argreg[i]);
-    
+
     // We need to align RSP to a 16 byte boundary before
     // calling a function because it is an ABI requirement.
-    // RXA is set to 0 for variadic function.
+    // RAX is set to 0 for variadic function.
     int seq = labelseq++;
     printf("  mov rax, rsp\n");
     printf("  and rax, 15\n");
@@ -134,7 +136,7 @@ void gen(Node *node) {
   case ND_RETURN:
     gen(node->lhs);
     printf("  pop rax\n");
-    printf("  jmp .Lreturn\n");
+    printf("  jmp .Lreturn.%s\n", funcname);
     return;
   }
 
@@ -183,23 +185,27 @@ void gen(Node *node) {
   printf("  push rax\n");
 }
 
-void codegen(Program *prog) {
+void codegen(Function *prog) {
   printf(".intel_syntax noprefix\n");
-  printf(".globl main\n");
-  printf("main:\n");
 
-  // Prologue
-  printf("  push rbp\n");
-  printf("  mov rbp, rsp\n");
-  printf("  sub rsp, %d\n", prog->stack_size);
+  for (Function *fn = prog; fn; fn = fn->next) {
+    printf(".global %s\n", fn->name);
+    printf("%s:\n", fn->name);
+    funcname = fn->name;
 
-  // Emit code
-  for (Node *node = prog->node; node; node = node->next) 
-    gen(node);
+    // Prologue
+    printf("  push rbp\n");
+    printf("  mov rbp, rsp\n");
+    printf("  sub rsp, %d\n", fn->stack_size);
 
-  // Epilogue
-  printf(".Lreturn:\n");
-  printf("  mov rsp, rbp\n");
-  printf("  pop rbp\n");
-  printf("  ret\n");
+    // Emit code
+    for (Node *node = fn->node; node; node = node->next)
+      gen(node);
+
+    // Epilogue
+    printf(".Lreturn.%s:\n", funcname);
+    printf("  mov rsp, rbp\n");
+    printf("  pop rbp\n");
+    printf("  ret\n");
+  }
 }
