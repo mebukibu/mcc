@@ -8,7 +8,9 @@ mcc: $(OBJS)
 $(OBJS): mcc.h
 
 test: mcc
-				./test.sh
+				./mcc tests > tmp.s
+				gcc -static -o tmp tmp.s
+				./tmp
 
 clean:
 				rm -f mcc *.o *~ tmp*
